@@ -1,5 +1,3 @@
-## Autonomic Software and Systems by team_burner
-
 ### Currently implemented
 - Calculating direction and distance to the current destination.
 - Navigation by waypoints should work OK. I have not been able to test it thoroughly, though, since something is causing segmentation faults when I try to get the waypoint for the neighbouring lane.
