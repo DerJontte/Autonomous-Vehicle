@@ -44,7 +44,7 @@ class Executor(object):
         speed = self.knowledge.retrieve_data('speed')
         target_speed = self.knowledge.retrieve_data('target_speed')
 
-        # Initialize throttle and heading
+        # Initialize throttle and §
         control = self.vehicle.get_control()
 
         # TODO: Combine the threshold calculator and this calculator in the planner, and refine it. The car still wobbles a lot.
@@ -66,7 +66,7 @@ class Executor(object):
             control.throttle = 0
             control.brake = 0.3
         elif speed_diff > 0:
-            control.throttle = min((speed_diff / target_speed) + 0.2 , 1.0) - abs(control.steer)
+            control.throttle = min((speed_diff / target_speed) + 0.6 , 1.0) - abs(control.steer)
             control.brake = 0.0
 
         self.vehicle.apply_control(control)
@@ -102,9 +102,6 @@ class Planner(object):
 
     # Update internal state to make sure that there are waypoints to follow and that we have not arrived yet
     def update_plan(self):
-        if len(self.path) == 0:
-            return
-
         if self.knowledge.arrived_at(self.path[0]):
             self.path.popleft()
 
@@ -177,7 +174,7 @@ class Planner(object):
             next_point = find_next(next_point, destination_wp)
             self.path.append(next_point.transform.location)
         self.path.append(destination_wp)
-#        self.draw_debug_path(self.path)
+        self.draw_debug_path(self.path)
         return self.path
 
     def draw_debug_path(self, path):

@@ -35,12 +35,16 @@ class Monitor(object):
         # Set up lane detector
         lane_sensor = world.get_blueprint_library().find('sensor.other.lane_invasion')
         self.lane_detector = world.spawn_actor(lane_sensor, carla.Transform(), attach_to=self.vehicle)
-        self.lane_detector.listen(lambda event: Monitor._on_invasion(weak_self, event))
+        self.lane_detector.listen(lambda event: self._on_invasion(weak_self, event))
 
         # Set up collision sensor
         collision_sensor = world.get_blueprint_library().find('sensor.other.collision')
         self.collision_detector = world.spawn_actor(collision_sensor, carla.Transform(), attach_to=self.vehicle)
         self.collision_detector.listen(lambda event: self._on_collision(weak_self, event))
+
+        obstacle_sensor = world.get_blueprint_library().find('sensor.other.obstacle')
+        self.obstacle_sensor = world.spawn_actor(obstacle_sensor, carla.Transform(carla.Location(x=1.5, y=1, z=2)))
+        self.obstacle_sensor.listen(lambda event: self._on_obstacle(weak_self, event))
 
         # Set up a camera to enable rendering a first person perspective view, and to be able to do object recognition
         # if the need arises.
@@ -63,7 +67,6 @@ class Monitor(object):
         self.knowledge.update_data('location', self.vehicle.get_transform().location)
         self.knowledge.update_data('rotation', self.vehicle.get_transform().rotation)
         self.knowledge.update_data('velocity', self.vehicle.get_velocity()) # This is a vector that will be processed in the analyzer
-        self.knowledge.update_data('distance', distance)
 
         self.knowledge.update_data('speed_limit', self.vehicle.get_speed_limit())
 
@@ -85,6 +88,10 @@ class Monitor(object):
         if not self:
             return
 
+    @staticmethod
+    def _on_obstacle(weaak_self, event):
+        self = weaak_self()
+        print("Obstacle:", event.other_actor, event.distance)
 
 # Analyser is responsible for parsing all the data that the knowledge has received from Monitor and turning it into something usable
 # TODO: During the update step parse the data inside knowledge into information that could be used by planner to plan the route
@@ -94,16 +101,9 @@ class Analyser(object):
 
     # Function that is called at time intervals to update ai-state
     def update(self, time_elapsed):
-        # Get the 2D-distances to the current destination
-        distance_x, distance_y = self.calculate_XY_distances()
-
-        # Calculate the 2D-direction to the current destination, and the difference to our current direction
-        heading = math.atan2(distance_y, distance_x)
         heading_diff = self.calculate_heading_diff()
 
-        self.knowledge.update_data('distance_x', distance_x)
-        self.knowledge.update_data('distance_y', distance_y)
-        self.knowledge.update_data('heading', heading)
+        # self.knowledge.update_data('heading', heading)
         self.knowledge.update_data('heading_diff', heading_diff)
         self.knowledge.update_data('speed', self.get_speed())
         return
@@ -112,19 +112,9 @@ class Analyser(object):
         velocity = self.knowledge.retrieve_data('velocity')
         return math.sqrt(velocity.x ** 2.0 + velocity.y ** 2.0 + velocity.z ** 2.0) * 3.6
 
-    def calculate_XY_distances(self):
-        location = self.knowledge.retrieve_data('location')
-        destination = self.knowledge.get_current_destination()
-        distance_x = destination.x - location.x
-        distance_y = destination.y - location.y
-        return distance_x, distance_y
-
     def calculate_heading_diff(self):
-        current_location = self.knowledge.get_location()
         current_angle = math.radians(self.knowledge.get_rotation())
-        next_waypoint = self.knowledge.get_current_destination()
-
-        target_vector = carla.Vector3D(x=next_waypoint.x - current_location.x, y=next_waypoint.y - current_location.y)
+        target_vector = self.knowledge.get_current_destination() - self.knowledge.get_location()
         target_angle = math.atan2(target_vector.y, target_vector.x)
 
         diff = target_angle - current_angle

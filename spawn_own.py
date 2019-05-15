@@ -55,22 +55,10 @@ def main():
         blueprints = [x for x in blueprints if int(x.get_attribute('number_of_wheels')) == 4]
         blueprints = [x for x in blueprints if not x.id.endswith('isetta')]
 
-        def draw_forward_vector():
-            start_transform = world.get_map().get_waypoint(actor_list[0].get_location()).transform
-            start_location = start_transform.location
-            f_vect = start_transform.get_forward_vector()
-            raiser = carla.Location(y=0.5)
-            line_end = start_location + carla.Location(x=f_vect.x * 5, y=f_vect.y * 5)
-            world.debug.draw_line(start_location + raiser, line_end + raiser, thickness=0.3, life_time=10.0)
-
-        def label_spawn_points():
-            wps = world.get_map().get_spawn_points()
-            for i in range(len(wps)):
-                world.debug.draw_string(wps[i].location, str(i))
-
         # This is definition of a callback function that will be called when the autopilot arrives at destination
         def route_finished(autopilot):
             print("Vehicle arrived at destination")
+            client.apply_batch([carla.command.DestroyActor(x.id) for x in actor_list])
 
         # Function to spawn new vehicles
         def try_spawn_random_vehicle_at(transform, destination):
@@ -94,17 +82,16 @@ def main():
         spawn_points = list(world.get_map().get_spawn_points())
         print('found %d spawn points.' % len(spawn_points))
 
-        start = spawn_points[124]
-        end = spawn_points[36]
-        ex2 = [carla.Transform(location=carla.Location(42.5959, -4.3443, 1.8431), rotation=carla.Rotation(yaw=180)), carla.Transform(location=carla.Location(x=-30, y=167, z=1.8431))]
-        start, end = ex2
+        start = spawn_points[random.randint(0, len(spawn_points))]
+        end = spawn_points[random.randint(0, len(spawn_points))]
         end = world.get_map().get_waypoint(end.location).transform
         controller = try_spawn_random_vehicle_at(start, end)
 
         # Infinite loop to update car status
         while True:
             status = controller.update()
-            render(controller.knowledge.retrieve_data('rgb_camera'))
+
+#            render(controller.knowledge.retrieve_data('rgb_camera'))
 
             from pygame.locals import K_ESCAPE
             from pygame.locals import K_l
