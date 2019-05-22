@@ -53,14 +53,18 @@ class Navigator(object):
         route = nx.dijkstra_path(self.adjacency, start, end)
 
         path = deque([])
+        previous_yaw = 0
         for index in route:
-            location = self.waypoints[self.waypoints.id == index]['transform'].values[0].location
-            if location not in path:
+            waypoint = self.waypoints[self.waypoints.id == index]['transform'].values[0]
+            location = waypoint.location
+            rotation = waypoint.rotation
+            if location not in path and rotation.yaw != previous_yaw:
+                previous_yaw = rotation.yaw
                 path.append(location)
-                print(location)
-            self.world.debug.draw_string(location, str(len(path)), color=carla.Color(r=0, g=255, b=255), life_time=10.0)
 
         self.world.debug.draw_string(path[0], 'START', color=carla.Color(r=0, g=255, b=255), life_time=10.0)
+        for i in range(len(path)):
+            self.world.debug.draw_string(path[i], str(i), color=carla.Color(r=0, g=255, b=255), life_time=10.0)
         self.world.debug.draw_string(path[len(path)-1], 'END', color=carla.Color(r=0, g=255, b=255), life_time=10.0)
 
         return path
@@ -73,6 +77,7 @@ class Navigator(object):
             if distance < found_distance:
                 found_distance = distance
                 found = point
+                print(found.transformd)
         return found
 
     def draw_all_waypoints(self):
