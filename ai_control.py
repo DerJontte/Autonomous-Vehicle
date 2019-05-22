@@ -5,7 +5,9 @@ import os
 import sys
 from collections import deque
 import math
-
+import networkx as nx
+import pandas as pd
+from navigator import Navigator
 from ai_knowledge import Status
 try:
     sys.path.append(glob.glob('**/carla/dist/carla-*%d.%d-%s.egg' % (
@@ -81,10 +83,14 @@ class Planner(object):
         self.path = deque([])
         self.world = self.knowledge.retrieve_data('world')
         self.map = self.world.get_map()
+        self.navigator = Navigator(self.world)
+        self.adjacency, self.waypoints = self.navigator.create_graph_and_matrix()
 
     # Create a map of waypoints to follow to the destination and save it
     def make_plan(self, source, destination):
-        self.path = self.build_path(source, destination)
+        self.path = self.build_topological_path(source, destination)
+        print("Start: {}".format(self.path[0]))
+        print("End: {}".format(self.path[len(self.path)-1]))
         self.update_plan()
         self.knowledge.update_destination(self.get_current_destination())
 
@@ -187,3 +193,20 @@ class Planner(object):
 
     def get_waypoint(self, location):
         return self.map.get_waypoint(location)
+
+    def build_topological_path(self, start, end):
+        debug_markers_lifetime = 20.0
+        start = self.navigator.find_closest_waypoint(start.location)
+        end = self.navigator.find_closest_waypoint(end)
+        route = nx.dijkstra_path(self.adjacency, start[0], end[0])
+        waypoints = self.waypoints
+
+        path = deque([])
+        for index in route:
+            location = waypoints[waypoints.id == index]['transform'].values[0].location
+            path.append(location)
+            self.world.debug.draw_string(location, str(len(path)), color=carla.Color(r=0, g=255, b=255), life_time=debug_markers_lifetime)
+        self.world.debug.draw_string(path[0], 'START', color=carla.Color(r=0, g=255, b=255), life_time=debug_markers_lifetime)
+        self.world.debug.draw_string(path[len(path)-1], 'END', color=carla.Color(r=0, g=255, b=255), life_time=debug_markers_lifetime)
+
+        return path

@@ -84,8 +84,12 @@ def main():
 
         start = spawn_points[random.randint(0, len(spawn_points))]
         end = spawn_points[random.randint(0, len(spawn_points))]
-        end = world.get_map().get_waypoint(end.location).transform
+        # end = world.get_map().get_waypoint(end.location).transform
+#        end= world.get_map().get_waypoint(carla.Location(x=157.549, y=-6.12757, z=1.5)).transform
+        start = world.get_map().get_waypoint(carla.Location(x=71.3626, y=-7.41498, z=1.5)).transform
+        start = world.get_map().get_waypoint(ex2[0]).transform
         controller = try_spawn_random_vehicle_at(start, end)
+        print(controller)
 
         # Infinite loop to update car status
         while True:
